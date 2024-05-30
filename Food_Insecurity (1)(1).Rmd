@@ -1,0 +1,313 @@
+---
+title: "Food Insecurity in The US"
+author: "Fredrick Jones"
+date: "2024-04-14"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  html_notebook:
+    fig_caption: yes
+    fig.path: images/
+    fig_height: 6
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+INTRODUCTION
+
+The issue of food security is often relegated to far-off places, but it's imperative to recognize its presence closer to home, within the United States. While it may not see the stark images of starvation commonly associated with global hunger, food insecurity permeates households across the nation, affecting individuals of all ages. This report delves into the complexities of food security within the U.S., shedding light on its prevalence, implications, and potential solutions.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = F, message = F, fig.width = 10, fig.height = 10, results = "asis")
+
+options(digits = 2)
+options(scipen = 999)
+
+```
+
+
+```{r}
+rm(list=ls())
+if(!require(pacman)) install.packages("pacman")
+# Loading the required packages
+pkgs <- c("haven", "data.table", "xlsx", "dplyr","reshape2","rJava","readxl","openxlsx", "treemap", "foreign", "glm2", "tidyverse", "ggplot2", "viridis", "ggthemes", "stringr", "tibble")
+
+
+# Load packages using pacman
+pacman::p_load(pkgs, character.only = TRUE)
+```
+
+OBJECTIVES AND SUMMARY
+
+Through in-depth data analysis and visualization, the objectives of scrutinizing food insecurity trends and investigating vulnerable populations were effectively achieved. A concerning trend of rising food insecurity from 2021 onwards was uncovered, contrasting with a previous decline observed between 2000 and 2010. This analysis highlighted the critical need for targeted interventions to address this reversal, particularly among children and single-parent households, where alarmingly high rates of low or very low food security were identified. Moreover, exploration of gender disparities in food insecurity emphasized the disproportionate burden faced by households led by single mothers, underscoring the intersection of socioeconomic factors and gender in exacerbating food insecurity.
+
+Furthermore, the investigation into the relationship between poverty and food insecurity illuminated how income levels influence access to food, with lower-income households experiencing heightened vulnerability. By thoroughly examining the implications of food insecurity on children's development, including its effects on physical health, cognitive development, educational attainment, and long-term economic productivity, the urgency of addressing this issue was underscored.
+
+```{r}
+# Function to read Excel file and perform common data processing steps
+read_and_process_excel <- function(file_path, col_names, ...) {
+  data <- read_xlsx(file_path) %>%
+    set_names(col_names) %>%
+    filter(across(everything(), ~ !is.na(.))) %>%
+    mutate(across(where(is.numeric), ~ round(as.numeric(.), 1), ...))
+  return(data)
+}
+
+# Get general food security
+food_security <- read_and_process_excel(
+  "Data/foodsecure_pie2022.xlsx",
+  c("food_security_status", "prop")
+)
+
+# Get household food security
+household <- read_and_process_excel(
+  "Data/household_pie2022.xlsx",
+  c("household_food_security", "prop")
+)
+
+# Trends in food insecurity
+trends <- read_xlsx('Data/trends2022.xlsx') %>%
+  set_names(c("year", "Food_security_low_and_very_low", "Food_security_very_low")) %>%
+  mutate(across(c(year, starts_with("Food_security")), as.numeric)) %>%
+  filter(across(everything(), ~ !is.na(.))) %>%
+  pivot_longer(-year, names_to = "state")
+
+# Food insecure
+insecure <- read_and_process_excel(
+  'Data/insecurity2022.xlsx',
+  c('class', 'perc_2021', 'perc_2022', "perc", "sig")
+)
+
+
+# Very low security
+very_low <- read_and_process_excel(
+  'Data/verylow2022.xlsx',
+  c('class', 'perc_2021', 'perc_2022', "perc", "sig")
+)
+
+
+```
+
+TRENDS IN FOOD INSECURITY
+
+Trends in food insecurity reveal a concerning reality. After a period of decline between 2000 and 2010, there has been a notable uptick in food insecurity from 2021 onwards. The proportion of households experiencing low or very low food security has risen sharply, indicating a pressing need for action.
+Factors such as economic downturns, like those induced by the COVID-19 pandemic, may have contributed to this reversal.
+Addressing this trend requires a nuanced understanding of its root causes and targeted interventions to alleviate its impact. 
+
+```{r}
+trends <- trends %>%
+  mutate(
+    Food_Security_Status = case_when(
+      state == "Food_security_low_and_very_low" ~ "Low or Very Low Food Security",
+      TRUE ~ "Very Low Food Security"
+    )
+  ) %>%
+  select(-state) 
+
+# Visualization with additional elements a
+ggplot(trends, aes(x = year, y = value, color = Food_Security_Status, linetype = Food_Security_Status)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 3, shape = 21, fill = "white") +  
+  scale_color_manual(
+    values = c("#00BA38", "#F8766D"),
+    name = "Food Security Status",
+    labels = c("Very Low Food Security", "Low or Very Low Food Security")
+  ) +
+  scale_linetype_manual(values = c("solid", "longdash")) +
+  labs(
+    x = "Year",
+    y = "Percentage",
+    title = "Trends in Food Insecurity in the United States",
+    subtitle = "We see a steep rise in food insecurity from 2021 after food insecurity dropped between 2000 and 2010."
+  ) +
+  scale_x_continuous(breaks = seq(2000, 2030, by = 5)) +
+  ylim(0, 15) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 14),
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    panel.grid.major = element_blank(),  
+    panel.grid.minor = element_blank(),  
+    panel.background = element_rect(fill = "lightgray")  
+  )
+
+```
+
+
+FOOD SECURITY AMONGST CHILDREN
+
+Children are among the most vulnerable populations affected by food insecurity. Approximately 17% of households in the U.S. experience some form of food insecurity, with over 8% of adults with children facing food insecurity. 
+Alarmingly, 7.8% of children live in households with low food security, while 1% reside in homes with very low food security, placing them at risk of malnutrition and its long-term consequences. 
+Efforts to support these households, particularly those with children, are crucial for safeguarding the well-being of future generations.
+
+```{r}
+food_security <- food_security %>%
+  mutate(
+    food_security_status = case_when(
+      food_security_status == "Food insecurity among adults only in households with children" ~ "Food Insecure Adults with Children",
+      food_security_status == "Low food security among children" ~ "Children: Low security",
+      food_security_status == "Very low food security among children" ~ "Children: Very Low security",
+      TRUE ~ food_security_status
+    ),
+    prop = ifelse(food_security_status == "Food-secure households", 100 - 82.7, prop),
+    food_security_status = ifelse(food_security_status == "Food-secure households", "Food insecure households", food_security_status)
+  ) %>%
+  mutate(
+    food_security_status = fct_reorder(food_security_status, prop)
+  )
+
+# Create a more professional and appealing visualization
+ggplot(food_security, aes(x = food_security_status, y = prop, fill = food_security_status)) + 
+  geom_bar(stat = "identity", color = "black", size = 0.25) +  
+  scale_fill_brewer(palette = "Set2") +  
+  labs(
+    x = NULL,
+    y = "Percentage (%)",
+    title = "Food Security Amongst Children"
+  ) + 
+  coord_flip() + 
+  theme_few(base_size = 14) +  
+  theme(
+    legend.position = "none",  
+    panel.background = element_rect(fill = "#F0F0F0", color = "#E0E0E0"),  
+    panel.grid.major.y = element_blank(),  
+    axis.text.y = element_text(color = "#555555"),  
+    axis.title.y = element_blank(),  
+    axis.text.x = element_text(size = 12, color = "#555555", angle = 45, hjust = 1),  
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),  
+    plot.subtitle = element_text(size = 16, hjust = 0.5)  
+  )
+
+```
+
+GENDER DISPARITIES IN FOOD INSECURITY
+
+Households with single parents, particularly female heads of households, bear a disproportionate burden of food insecurity. 
+In 2022, over 33% of children in households led by single mothers experienced food insecurity, highlighting the urgent need for targeted support for these vulnerable families. Gender disparities intersect with socioeconomic factors, exacerbating the challenges faced by already marginalized communities.
+
+```{r}
+insecure <- insecure %>%
+  filter(class %in% c("Female head, no spouse", "Male head, no spouse", "Women living alone", "Men living alone")) %>%
+  select(-sig, -perc) %>%
+  pivot_longer(-class, names_to = "Year") %>%
+  mutate(
+    Year = as.numeric(str_remove(Year, "^perc_"))
+  )
+
+# Create a more visually appealing visualization using a point plot
+ggplot(insecure, aes(x = class, y = value, color = factor(Year), group = Year)) +
+  geom_point(size = 3) +
+  geom_line(size = 1, alpha = 0.5) +
+  scale_color_brewer(palette = "Set2") +  
+  labs(
+    x = NULL,
+    y = "Proportion (%)",
+    title = "Food Security by Gender",
+    subtitle = "Households with single parents are highly prone to food insecurity more than any other category of people"
+  ) +
+  theme_minimal() +  
+  theme(
+    legend.position = "top",
+    legend.title = element_blank(),
+    axis.text.x = element_text(size = 12, angle = 45, hjust = 1),  
+    axis.text.y = element_text(size = 12),  
+    axis.title.y = element_text(size = 14),  
+    plot.title = element_text(size = 20, face = "bold"),  
+    plot.subtitle = element_text(size = 14)  
+  )
+
+
+```
+
+POVERTY AND FOOD INSECURITY
+
+Poverty serves as a stark predictor of food insecurity, with lower-income households bearing the brunt of this burden. The prevalence of low and very low food security rises significantly as household income-to-poverty ratios decrease.
+More than 15% of households with an income-to-poverty ratio of less than 1 face very low food security, underscoring the inequities embedded within the socioeconomic structures
+
+```{r}
+# Creating the data frame
+very_low <- tibble(
+  class = c("Under 1.00", "Under 1.30", "Under 1.85", "1.85 and over"),
+  `Percent of U.S. households 2021` = c(13.8, 12.6, 10.2, 1.8),
+  `Percent of U.S. households 2022` = c(16.7, 15.6, 13.5, 2.4),
+  `Percentage point change` = c(2.9, 3.0, 3.3, 0.6)
+)
+
+# Reshaping the data for visualization
+very_low_long <- very_low %>%
+  pivot_longer(cols = starts_with("Percent"),
+               names_to = "Year",
+               values_to = "Percentage")
+
+# Plotting
+ggplot(very_low_long, aes(x = class, y = Percentage, fill = Year)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.7) +
+  labs(
+    x = "Household income-to-poverty ratio",
+    y = "Percentage",
+    title = "Prevalence of Very Low Food Security by Income-to-Poverty Ratio",
+    subtitle = "Comparison between 2021 and 2022",
+    fill = "Year"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12)
+  )
+
+
+
+```
+
+
+IMPLICATIONS FOR CHILDREN'S DEVELOPMENT
+
+1. Nutritional Deficiencies
+
+Insufficient access to healthy and well-rounded meals during important growth and development phases can result in significant nutritional deficiencies. Proper physical growth, cognitive function, and overall health require essential vitamins, minerals, and macronutrients. Children may not reach their full height potential, have slower progress in motor skills, and their immune system may be weakened if they lack proper nutrition. Long-term health complications, such as anemia, vitamin deficiencies, and metabolic disorders, can result from a lack of vital nutrients (Roberts et al., 2022).
+
+2. Cognitive Development
+
+Nutrition is essential for brain development, especially in early childhood when neural connections are quickly being established. Children who lack access to enough food may struggle with focusing, remembering information, and solving problems. These cognitive impairments may appear in educational environments, resulting in challenges in acquiring knowledge, decreased academic success, and higher chances of delays in development. Over time, these cognitive deficiencies can create ongoing cycles of poverty, restricting access to education and future prospects for those impacted.
+
+3. Health Risks
+
+Children who do not have enough food are at a higher risk for various health problems, including obesity, diabetes, and heart disease. Inadequate diet can weaken the immune system, increasing children's susceptibility to infections and diseases WHO (2024). Furthermore, limited availability of healthy food could worsen current health issues, resulting in longer hospital stays, higher medical expenses, and decreased overall well-being. Addressing food insecurity is crucial in reducing the impact of preventable diseases and improving the overall health of children.
+
+4. Behavioral and Emotional Challenges
+
+The stress and anxiety associated with food insecurity can have profound effects on children's mental health and emotional well-being. Living in a constant state of uncertainty about food availability can lead to heightened levels of stress, anxiety, and depression. Children may exhibit behavioral issues such as irritability, aggression, and withdrawal as coping mechanisms for managing food-related stressors. These emotional challenges can impact social interactions, academic performance, and overall resilience, contributing to long-term psychological consequences if left unaddressed.
+
+5. Educational Attainment
+
+Food insecurity can disrupt children's ability to fully engage in educational activities and participate in school-related functions. Hunger and malnutrition can lead to fatigue, lack of focus, and reduced motivation, hindering academic performance and educational attainment. Children may struggle to concentrate in class, complete homework assignments, and participate in extracurricular activities, thereby limiting their opportunities for intellectual growth and skill development. Addressing food insecurity is crucial for creating an enabling environment for learning and fostering educational success among all children.
+
+6. Economic Productivity
+
+Food insecurity in childhood can have lasting effects on development by influencing economic productivity and financial stability in adulthood. Adults who had insufficient access to food when they were young may encounter difficulties in obtaining steady jobs, progressing in their professions, and gaining financial autonomy. The ramifications of early malnutrition, including physical and cognitive limitations, can hinder one's ability to work efficiently, resulting in reduced wages, higher medical expenses, and a greater dependence on social assistance programs (Mollenkamp, 2023). It is crucial to address childhood food insecurity in order to break the cycle of poverty and foster economic prosperity for future generations.
+
+7. Social Relationships
+
+Food insecurity can affect how children interact with others and feel connected to their communities. Feelings of shame, embarrassment, and social isolation can result from the stigma of hunger and poverty in impacted children. They might have trouble creating and keeping friendships, joining social activities, and being involved in community events. Moreover, the pressures linked to not having enough food can negatively impact family dynamics and worsen already present conflicts within households, ultimately affecting children's social connections and mental health.
+
+
+
+Reference list
+
+Martín-Rodríguez, A., Bustamante-Sánchez, Á., Martínez-Guardado, I., Navarro-Jiménez, E., Plata-SanJuan, E., Tornero-Aguilera, J.F. and Clemente-Suárez, V.J. (2022). Infancy Dietary Patterns, Development, and Health: An Extensive Narrative Review. Children, 9(7), p.1072. doi:https://doi.org/10.3390/children9071072.
+
+Mollenkamp, D. (2023). Food Insecurity and Its Impact on the Economy. [online] Investopedia. Available at: https://www.investopedia.com/food-insecurity-impacts-economy-8303222.
+
+Roberts, M., Tolar-Peterson, T., Reynolds, A., Wall, C., Reeder, N. and Rico Mendez, G. (2022). The Effects of Nutritional Interventions on the Cognitive Development of Preschool-Age Children: A Systematic Review. Nutrients, [online] 14(3), p.532. doi:https://doi.org/10.3390/nu14030532.
+
+WHO (2024). Malnutrition. [online] Who.int. Available at: https://www.who.int/news-room/fact-sheets/detail/malnutrition.

@@ -1,0 +1,102 @@
+---
+title: "Minerals"
+author: "Fredrick Jones"
+date: "2024-05-03"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list = ls())
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readxl)
+
+data <- read_excel("Minerals.xlsx", sheet = 'Data_Catalogue')
+```
+
+```{r}
+str(data)
+```
+
+The distribution of mineral sources by their relationship with the US - allies, competitors, or neutral countries. The vast majority of sources are from neutral countries, followed by a modest number of competitor sources and a relatively small number from US allies.
+
+```{r}
+# Visualization 1: Distribution of Mineral Sources by Country and Relationship with the US
+ggplot(data, aes(x = Loc_Category, fill = Loc_Category)) +
+  geom_bar() +
+  labs(title = "Distribution of Mineral Sources by Relationship with the US",
+       x = "Relationship with US",
+       y = "Count",
+       fill = "Relationship with US") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+
+```
+
+The US has significantly fewer domestic mineral sources than the rest of the world combined. This lack of domestic production capacity leaves the US vulnerable to potential supply disruptions..
+```{r}
+# Visualization 2: Comparison of Mineral Sources between the US and Other Countries
+us_vs_other <- data.frame(
+  Country = c("United States", "Other Countries"),
+  Count = c(sum(data$`Country or locality` == "United States"), sum(data$`Country or locality` != "United States"))
+)
+ggplot(us_vs_other, aes(x = Country, y = Count, fill = Country)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Comparison of Mineral Sources between the US and Other Countries",
+       x = "Country",
+       y = "Count",
+       fill = "Country") +
+  theme_minimal()
+
+
+```
+
+The specific minerals that would have the highest impact if shortfalls occurred. Critical technology metals like rare earth elements, rhenium, cesium and others rank among the most concerning potential supply risks.
+```{r}
+# Visualization 4: Mineral Sources Shortfall Impact Analysis
+mineral_shortfall <- data.frame(
+  Mineral = unique(data$Mineral),
+  Count = sapply(unique(data$Mineral), function(min) sum(data$Mineral == min))
+)
+ggplot(mineral_shortfall, aes(x = reorder(Mineral, Count), y = Count)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Mineral Sources Shortfall Impact Analysis",
+       x = "Mineral",
+       y = "Count") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+The key countries/localities that the US is relying on for mineral imports, breaking them down by relationship status. Several of the major source nations are competitors or neutral, not close allies.
+```{r}
+# Group the data by country and relationship with the US
+library(dplyr)
+grouped_data <- data %>%
+  group_by(`Country or locality`, Loc_Category) %>%
+  summarize(Count = n())
+
+# Visualization: Grouped Bar Chart
+ggplot(grouped_data, aes(x = `Country or locality`, y = Count, fill = Loc_Category)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Distribution of Mineral Sources by Country and Relationship with the US",
+       x = "Country or Locality",
+       y = "Count",
+       fill = "Relationship with US") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+In summary, the visualizations reveal the US's considerable dependencies on foreign sources, especially for technology-critical minerals from competitors and neutral parties. With scarce domestic production, the impacts from any supply disruptions could be severe across economic sectors reliant on these resources. This emphasizes the strategic need to develop domestic capabilities and reduce overreliance on nations that may not prioritize US supply interests.

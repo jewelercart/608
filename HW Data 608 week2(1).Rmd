@@ -1,0 +1,51 @@
+---
+title: "HW week 2 Data 608"
+author: "Fredrick Jones"
+date: "2024-02-04"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### First load the data into R
+
+```{r}
+library(readxl)
+```
+
+**Let's see a few rows of the given data**
+
+```{r}
+df<- readxl::read_xlsx("IIJA FUNDING AS OF MARCH 2023.xlsx")
+head(df, 5)
+```
+
+Renaming the feature and target so that we can easily handle them in R
+
+```{r}
+library(dplyr)
+df <- df |>
+  rename(State_TTN = `State, Teritory or Tribal Nation`,
+         Total_billions=`Total (Billions)`)
+head(df,3)
+```
+
+```{r}
+library(ggplot2)
+ggplot(data = df, mapping= aes(x=State_TTN, y=Total_billions))+
+  geom_point(col='red')+
+  theme(axis.text.x = element_text(angle=90, vjust=0, hjust=1))
+```
+
+It can be seen that some State, Teritory or Tribal Nation received more fund than others. But allocation of fund is also based on the population size and other factors such as unemployment rate. To check if the allocation of fund is affected by political interest of Biden administration, it will need to find fund of allocation per capita. So, the fund should be divided by the population.Based on the data given we can not claim that biden administration allocated fund according to their political interest.
+
+```{r}
+ggplot(data = df, mapping= aes(Total_billions))+
+  geom_boxplot(color = 'blue', fill='lightblue')+
+  coord_flip()
+  
+```
+
+The box plot shows that there are some outliers in the allocation of funds. This might be due to the fact that Biden administration might have allocated fund according to their political interest. But to state it firmly, we will have to study other parameters of the states that received much more fund than other states.

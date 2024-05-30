@@ -1,0 +1,117 @@
+---
+title: "Data 608"
+subtitle: "Story 4"
+author: "Fredrick Jones"
+date: "2024-03-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data source:
+
+The salary data for this story was taken from kaggle which is available at the link:
+
+<https://www.kaggle.com/datasets/arnabchaki/data-science-salaries-2023?resource=download>
+
+More information about the wages and employment can be found at U.S. Bureau of Labour Statistics: <https://www.bls.gov/oes/current/oes_nat.htm>
+
+## Load the required library
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+```
+
+## Load the dataset
+
+```{r}
+df <- read.csv("ds_salaries.csv")
+head(df)
+```
+
+## Select the required variables
+
+Considering salary in USD therefore selecting the salary work year, experience_level, job_title, salary_in_usd, company_location, and company_size
+
+```{r}
+df <- df|>select(work_year, experience_level, employment_type, job_title, salary_in_usd, company_location, company_size)
+head(df)
+```
+
+## Distribution of salaries in 2023
+
+```{r}
+df2023<- df|> filter(work_year==2023)
+ggplot(df2023, aes(x=salary_in_usd))+
+  geom_histogram(col='darkgreen', fill='green')
+```
+
+Mean salary of all the occupations related to data is around 1.5E05 and its range is from 0 to 4E05 usd per year.
+
+## Top salaries in 2023
+
+```{r}
+df2023|>
+  group_by(job_title)|>
+  summarize(mean_salary = mean(salary_in_usd))|>
+  filter(mean_salary> 1.5*mean(mean_salary))|>
+  ggplot(aes(x=job_title, y=mean_salary, fill= job_title))+
+    geom_col()+ labs(x="Job Title",
+                     y="Average Salary in 2023",
+                     title = "Top average salaries in the field of data in 2023 with job title")+
+    theme(axis.text.x = element_text(angle=90, hjust=1))
+  
+  
+```
+
+It can be seen that the highest average salary was for the position of director of data science and top five fields of highest paying designations are AI Scientist, computer vision engineer, head of data and director of data science.
+
+## Best Paying Branch to enter in 2023
+
+```{r}
+df2023|> filter(experience_level=="EN")|>
+  group_by(job_title)|>
+  summarize(mean_salary = mean(salary_in_usd))|>
+  filter(mean_salary> 1.3*mean(mean_salary))|>
+  ggplot(aes(x=job_title, y=mean_salary, fill= job_title))+
+    geom_col()+ labs(x="Job Title",
+                     y="Average Salary in 2023",
+                     title = "Top entry level average salaries")+
+    theme(axis.text.x = element_text(angle=90, hjust=1))
+```
+
+It can be seen that the top high paying entry level jobs in the field of data are Computer Vision Engineer and applied scientists.
+
+**Let's look at the range of salaries for these des'ignations.**
+
+```{r}
+top_jobs <- c("Applied Scientist", "Computer Vision Engineer", "Machine Learning Engineer", "Research Scientist")
+df2023|> filter (job_title %in% top_jobs )|>
+  ggplot(aes(x=job_title, y=salary_in_usd, fill= job_title))+
+    geom_boxplot()+ labs(
+      x= "Job Title",
+      y = "Salary in USD",
+      title = "Comparison of entry level salaries in top jobs"
+    )+theme(axis.text.x = element_text(angle=90, hjust=1))
+  
+```
+
+It can be seen that the computer vision engineers are those who got highest paying entry level jobs.
+
+**Mean salary range of data scientist according to the year**
+
+```{r}
+df|> filter (job_title=="Data Scientist")|>
+     group_by(work_year)|>
+     summarize( mean_salary = mean(salary_in_usd))|>
+     ggplot(aes(x= work_year, y=mean_salary, fill=work_year))+
+        geom_col()+labs(
+          x= "year",
+          y="Salary in USD",
+          title = "Annual Salary of data scientist"
+        )
+
+```
