@@ -1,0 +1,115 @@
+---
+title: "Data 608 R Programming"
+subtitle: "Homework 2"
+author: "Fredrick Jones"
+date: "2024-02-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load the required libraries
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+```
+
+## Load the data
+
+```{r}
+df_cpi <- read.csv("CPI index data.csv")
+df_fed_rate <- read.csv("FEDFUNDS.csv")
+df_unemployment <- read.csv("Unemployment.csv")
+df_pop16above<- read.csv("Population16above.csv")
+
+```
+
+### Just have a glimpse of the data
+
+```{r}
+head(df_cpi)
+```
+
+We will use Annual CPI index to make our visual story
+
+```{r}
+head(df_fed_rate)
+```
+
+```{r}
+head(df_pop16above)
+```
+
+Here population is given in thousands and population in January might be considered as the population at the start of each year. And any change for one year can be calculated from Jan to jan for one year. To get the unemployment rate, we need to divide the total unemployment by the population.
+
+```{r}
+df_cpi1 <- df_cpi|>
+  filter(Year >= 1997)|>
+  select(Year, Annual)
+head(df_cpi1)
+```
+
+**Plot of Annual CPI index**
+
+```{r}
+ggplot(data = df_cpi1, aes(x=Year, y= Annual))+
+  geom_line()+
+  labs(
+    title = "Plot of Annual CPI index for the period 1997-2023",
+    x="Year", y="Annual CPI"
+  )
+```
+
+It can be seen that from 2020 onwards the Annual CPI index curve is steeper which indicates the infaltion rate has become higher and unbearable in the recent past. Poor have difficulty to survive and everybody is facing inflation as tough to tackle.
+
+**Fed Funds Rate (FRED)**
+
+```{r}
+df_fed_rate$DATE = as.Date(df_fed_rate$DATE)
+df_fed<-df_fed_rate|> filter(DATE >= as.Date('1997-01-01'))
+head(df_fed)
+```
+
+```{r}
+ggplot(df_fed, aes(x=DATE, y=FEDFUNDS))+
+  geom_line()+
+  labs(
+    title = "Plot showing the FED FUND RATE from 1997 to 2023",
+    x='DATE',
+    y="FRED"
+  )
+```
+
+The plot shows some cycle and tells us whenever the inflation is higher, the Fed Fund rate is raised to curb the inflation. There is appears some seasonality like in 10 - 15 years this phenomenon is repeated.
+
+```{r}
+df_pop <- df_pop16above|> select(Year, Jan)
+          
+```
+
+```{r}
+df_unemp<- df_unemployment|>select(Year, Jan)
+df_comb <- merge(df_pop, df_unemp, by="Year")
+colnames(df_comb)<-c("Year", "Population", "Unemployment")
+df_comb
+```
+
+Now we can easily find the unemployment rate
+
+```{r}
+df_unemp_rate <- df_comb|> mutate( Unemp_rate = Unemployment/Population)
+ggplot(df_unemp_rate, aes(x=Year, y=Unemp_rate))+
+  geom_line()+
+  labs(
+    title = "Plot of Unemployment rate for the period 1997-2023",
+    x="Year",
+    y="Unemployment Rate"
+  )
+```
+
+It can be seen that the unemployment rate is being curbed. Thus, it can be concluded that BIden Administration is working to put the inflation down and intends to provide emplyment.
+
+\
